@@ -1,6 +1,5 @@
-using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody))]
 public class Mechanich : MonoBehaviour
@@ -8,13 +7,17 @@ public class Mechanich : MonoBehaviour
 
     Rigidbody rb;
     public float speed;
-    float currentRotationY = 0f;
     public float mouseSensivity;
+    public Image cursor;
+    float currentRotationY = 0f;
     GameObject hitObject;
     Transform fHitObjectR;
-    Vector3 rayOriginX;
+    Vector3 rayOriginY;
     bool isTakenObject;
     public static bool isTakedObject;
+    bool isGrounded;
+    string layerName;
+
 
 
     void Start()
@@ -25,7 +28,7 @@ public class Mechanich : MonoBehaviour
         isTakenObject = false;
         isTakedObject = false;
         hitObject = null;
-
+        layerName = "Grounded";
     }
 
 
@@ -33,98 +36,102 @@ public class Mechanich : MonoBehaviour
     {
         Movement();
         ObjectTransform();
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            rb.velocity = new Vector3(0, 5, 0);
-        }
-
     }
-    void ObjectTransform()
+    public void ObjectTransform()
     {
 
         RaycastHit hit;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
+        int layerIndex = LayerMask.NameToLayer(layerName);
+        int layerMask = ~(1 << layerIndex);
+        Debug.Log(isTakedObject);
 
-
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity))
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask))
         {
+
             Debug.DrawRay(ray.origin, hit.transform.position * hit.distance, Color.red);
-            Debug.Log(hitObject);
-            Debug.Log("Object Distance: " + Vector3.Distance(ray.origin, hit.point));
+
             Rigidbody hitRigidbody = hit.transform.gameObject.GetComponent<Rigidbody>();
             GameObject pivot = GameObject.FindGameObjectWithTag("Pivot");
-            rayOriginX = new Vector3(hit.point.x,ray.origin.y,hit.point.z);
-           
+            GameObject hitTransform = hit.transform.gameObject;
+            rayOriginY = new Vector3(hit.point.x, ray.origin.y, hit.point.z);
+
+
             if (Vector3.Distance(ray.origin, hit.point) <= 2f)
             {
-                if (Input.GetKeyDown(KeyCode.E))
+                // Taked
+                if (layerName == "Grounded")
+                {
+                    if (hitObject != null && hitObject != hitTransform)
+                    {
+                        hitObject.GetComponent<Outline>().enabled = false;
+                    }
+                    hitTransform.GetComponent<Outline>().enabled = true;
+                    hitObject = hitTransform;
+                }
+                if (Input.GetKeyDown(KeyCode.E) && !isTakedObject)
                 {
                     isTakenObject = !isTakenObject;
-                    Debug.Log(isTakenObject);
-                    Debug.Log("Girdi");
-
-                    if (hit.transform.gameObject.CompareTag("Grounded"))
-                        isTakenObject = false;
-                        
-
-                    if (isTakenObject && hitObject == null && !hit.transform.gameObject.CompareTag("Grounded"))
+                    if (isTakenObject)
                     {
-                        
-                        hitObject = hit.transform.gameObject;
+                        hitObject = hitTransform;
+                        hitObject.SetActive(false);
                         fHitObjectR = hitObject.transform;
                         hitObject.transform.rotation = fHitObjectR.rotation;
-                        hitObject.GetComponent<MeshRenderer>().enabled=false;
-                        hit.transform.GetChild(0).gameObject.SetActive(true);
-                        
-                        
+                        layerName = ".";
                     }
-                    if (!isTakenObject && hitObject != null && hit.transform.gameObject.CompareTag("Grounded"))
+                    if (!isTakenObject && hitObject != null)
                     {
-                        hitObject.transform.position = rayOriginX;
-                        hitObject.SetActive(true);
+
+                        hitObject.transform.position = rayOriginY;
                         if (Input.GetKey(KeyCode.LeftShift))
                             fHitObjectR.rotation = hitObject.transform.rotation;
                         else
                             hitObject.transform.rotation = Quaternion.Euler(0, 0, 0);
-                        hit.transform.GetChild(0).gameObject.SetActive(false);
+                        hitObject.SetActive(true);
                         hitObject = null;
                         fHitObjectR = null;
-
+                        layerName = "Grounded";
                     }
                 }
-                if (isTakenObject)
-                {
-                    hit.transform.GetChild(0).GetComponent<Rigidbody>().MovePosition(pivot.transform.position);
-                    hit.transform.GetChild(0).GetComponent<Rigidbody>().MoveRotation(Quaternion.LookRotation(Camera.main.transform.forward));
+                //Hold
 
+                if (Input.GetButtonDown("Fire1") && !isTakenObject)
+                    isTakedObject = true;
+                if (Input.GetButton("Fire1") && isTakedObject && !isTakenObject && hitObject != null)
+                {
+                    hitObject = hitTransform;
+                    hitRigidbody.MovePosition(pivot.transform.position);
+                    hitRigidbody.MoveRotation(Quaternion.LookRotation(Camera.main.transform.forward * Time.deltaTime));
+                    hitRigidbody.useGravity = false;
+                    hitRigidbody.isKinematic = true;
+                    hitRigidbody.isKinematic = false;
+                    hitObject.GetComponent<Outline>().enabled = false;
                 }
-                
-            }
-            if (Input.GetButton("Fire1") && !hit.transform.gameObject.CompareTag("Grounded") && !isTakedObject)
-            {
 
-                
-
-                hitRigidbody.MovePosition(pivot.transform.position);
-                hitRigidbody.MoveRotation(Quaternion.LookRotation(Camera.main.transform.forward));
-                hitRigidbody.useGravity = false;
-                hitRigidbody.isKinematic = true;
-                hitRigidbody.isKinematic = false;
-
-            }
-            if (Input.GetButtonUp("Fire1"))
-            {
-                isTakedObject = false;
-                if (!hit.transform.gameObject.CompareTag("Grounded"))
+                if (Input.GetButtonUp("Fire1"))
                 {
-                    isTakedObject = false;
                     hitRigidbody.useGravity = true;
-
+                    if (hitObject != null)
+                    {
+                        hitObject.GetComponent<Outline>().enabled = true;
+                    }
                 }
 
             }
+            else
+            {
+                if (layerName == "Grounded")
+                {
+                    hitTransform.GetComponent<Outline>().enabled = false;
+                }
+
+            }
+
+
+
+
 
 
 
@@ -132,12 +139,18 @@ public class Mechanich : MonoBehaviour
         else
         {
             Debug.DrawRay(ray.origin, transform.TransformDirection(Vector3.forward) * 1000, Color.green);
-
+            if (hitObject != null)
+            {
+                hitObject.GetComponent<Outline>().enabled = false;
+            }
 
 
         }
 
+
     }
+
+
     void Movement()
     {
         float horizontal = Input.GetAxis("Horizontal") * Time.deltaTime;
@@ -155,5 +168,19 @@ public class Mechanich : MonoBehaviour
         transform.rotation = Quaternion.Euler(0f, transform.rotation.eulerAngles.y + mouseX, 0);
         Camera.main.transform.localRotation = Quaternion.Euler(currentRotationY, 0f, 0f);
 
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        {
+            rb.velocity = new Vector3(0, 5, 0);
+        }
     }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        isGrounded = true;
+    }
+    private void OnCollisionExit(Collision collision)
+    {
+        isGrounded = false;
+    }
+
 }
