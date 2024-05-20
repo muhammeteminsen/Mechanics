@@ -45,7 +45,7 @@ public class Mechanich : MonoBehaviour
 
         int layerIndex = LayerMask.NameToLayer(layerName);
         int layerMask = ~(1 << layerIndex);
-        Debug.Log(isTakedObject);
+        Image cursorImage = cursor.GetComponent<Image>();
 
         if (Physics.Raycast(ray, out hit, Mathf.Infinity, layerMask))
         {
@@ -66,8 +66,10 @@ public class Mechanich : MonoBehaviour
                     if (hitObject != null && hitObject != hitTransform)
                     {
                         hitObject.GetComponent<Outline>().enabled = false;
+                        cursorImage.color = Color.white;
                     }
                     hitTransform.GetComponent<Outline>().enabled = true;
+                    cursorImage.color = Color.red;
                     hitObject = hitTransform;
                 }
                 if (Input.GetKeyDown(KeyCode.E) && !isTakedObject)
@@ -88,7 +90,7 @@ public class Mechanich : MonoBehaviour
                         if (Input.GetKey(KeyCode.LeftShift))
                             fHitObjectR.rotation = hitObject.transform.rotation;
                         else
-                            hitObject.transform.rotation = Quaternion.Euler(0, 0, 0);
+                            hitObject.transform.rotation = Quaternion.Euler(Camera.main.transform.forward);
                         hitObject.SetActive(true);
                         hitObject = null;
                         fHitObjectR = null;
@@ -108,6 +110,14 @@ public class Mechanich : MonoBehaviour
                     hitRigidbody.isKinematic = true;
                     hitRigidbody.isKinematic = false;
                     hitObject.GetComponent<Outline>().enabled = false;
+                    cursorImage.color = Color.white;
+                    if (Input.GetKeyDown(KeyCode.LeftShift))
+                    {
+                        hitObject.GetComponent<Rigidbody>().velocity += Camera.main.transform.forward * 10;
+                        hitObject.GetComponent<Rigidbody>().useGravity = true;
+                        isTakedObject = false;
+
+                    }
                 }
 
                 if (Input.GetButtonUp("Fire1"))
@@ -116,6 +126,7 @@ public class Mechanich : MonoBehaviour
                     if (hitObject != null)
                     {
                         hitObject.GetComponent<Outline>().enabled = true;
+                        cursorImage.color = Color.red;
                     }
                 }
 
@@ -125,6 +136,7 @@ public class Mechanich : MonoBehaviour
                 if (layerName == "Grounded")
                 {
                     hitTransform.GetComponent<Outline>().enabled = false;
+                    cursorImage.color = Color.white;
                 }
 
             }
@@ -142,6 +154,7 @@ public class Mechanich : MonoBehaviour
             if (hitObject != null)
             {
                 hitObject.GetComponent<Outline>().enabled = false;
+                cursorImage.color = Color.white;
             }
 
 
@@ -170,7 +183,7 @@ public class Mechanich : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
-            rb.velocity = new Vector3(0, 5, 0);
+            rb.velocity += new Vector3(0, 5, 0);
         }
     }
 

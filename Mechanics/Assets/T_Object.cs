@@ -10,7 +10,7 @@ public class T_Object : MonoBehaviour
 
         Mechanich.isTakedObject = false;
         GetComponent<Rigidbody>().useGravity = true;
-
+        
     }
 
 }
